@@ -1,0 +1,6 @@
+Variable Used in Study,Field ID,Field Name,Database Name,Database ID,Conversion Function,Aggregator
+TOA upwelling longwave flux,LWTUP,Longwave Top-of-Atmosphere Upwelling Flux,M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
+"TOA upwelling longwave flux, clear sky",LWTUPCLR,Longwave TOA Upwelling Flux (Clear Sky),M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
+TOA incoming shortwave flux,SWTDN,Shortwave TOA Downward Flux,M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
+TOA net downward shortwave flux,SWTNT,Shortwave TOA Net Downward Flux,M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
+"TOA net downward shortwave flux, clear sky",SWTNTCLR,Shortwave TOA Net Downward Flux (Clear Sky),M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
