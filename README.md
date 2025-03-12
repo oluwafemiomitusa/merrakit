@@ -4,7 +4,7 @@ A high-performance Python package for parallel downloading and processing of NAS
 
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-This package is an enhanced fork of the [original MERRA download script](https://github.com/emilylaiken/merradownload), completely redesigned for parallel processing and multi-variable support.
+This package is an enhanced fork of the [original MERRA download script](https://github.com/emilylaiken/merradownload), redesigned for parallel processing and multi-variable support.
 
 ## What's New in This Version
 - **Multi-variable Processing**: Download and process multiple meteorological variables in a single run
