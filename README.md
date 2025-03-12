@@ -41,14 +41,16 @@ The `merra2_variables.csv` file defines download parameters for each variable:
 - `Conversion Function`: Lambda function for unit conversion (e.g., `lambda x: x`)
 - `Aggregator`: Method for data aggregation ('mean', 'sum', 'max', or 'min')
 
-Example CSV entry:
-```csv
-Variable Used in Study,Field ID,Field Name,Database Name,Database ID,Conversion Function,Aggregator
-TOA upwelling longwave flux,LWTUP,Longwave Top-of-Atmosphere Upwelling Flux,M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
-precipitation,PRECTOT,Total precipitation,M2T1NXFLX,tavg1_2d_flx_Nx,lambda x: x * 86400,sum  # Convert from kg/m^2/s to mm/day
-temperature,T2M,2-meter air temperature,M2T1NXFLX,tavg1_2d_flx_Nx,lambda x: x - 273.15,mean  # Convert from K to °C
-wind_speed,U2M,2-meter eastward wind,M2T1NXFLX,tavg1_2d_flx_Nx,lambda x: x,mean
-```
+Example CSV entries:
+
+| Variable Used in Study | Field ID | Field Name | Database Name | Database ID | Conversion Function | Aggregator |
+|------------------------|-----------|-------------|---------------|-------------|-------------------|------------|
+| TOA upwelling longwave flux | LWTUP | Longwave Top-of-Atmosphere Upwelling Flux | M2T1NXRAD | tavg1_2d_rad_Nx | lambda x: x | mean |
+| precipitation | PRECTOT | Total precipitation | M2T1NXFLX | tavg1_2d_flx_Nx | lambda x: x * 86400 | sum |
+| temperature | T2M | 2-meter air temperature | M2T1NXFLX | tavg1_2d_flx_Nx | lambda x: x - 273.15 | mean |
+| wind_speed | U2M | 2-meter eastward wind | M2T1NXFLX | tavg1_2d_flx_Nx | lambda x: x | mean |
+
+*Note: precipitation converts from kg/m²/s to mm/day, temperature converts from K to °C*
 
 ### Quick Start
 
