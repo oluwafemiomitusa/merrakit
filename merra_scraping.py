@@ -1,4 +1,27 @@
-# %%Imports
+"""
+MERRA-2 Data Downloader and Processor
+
+This script downloads and processes meteorological data from NASA's MERRA-2 database.
+It supports parallel downloading and processing of multiple variables for multiple locations.
+
+Example usage:
+    # Set your credentials
+    username = 'your_username'
+    password = 'your_password'
+    
+    # Use default West African locations or specify your own
+    my_locs = [
+        ('london', '51.5074', '-0.1278'),
+        ('paris', '48.8566', '2.3522')
+    ]
+    
+    # Run with custom settings
+    years = list(range(2020, 2024))  # Last 4 years
+    BASE_DATA_DIR = '/path/to/data'
+    NUMBER_OF_CONNECTIONS = 5
+    NUMBER_OF_PROCESSES = 2
+"""
+
 import os
 import re
 import numpy as np
@@ -10,14 +33,28 @@ from calendar import monthrange
 from opendap_download.multi_processing_download import DownloadManager
 import ast  # for safely evaluating string lambda functions
 
-# %%
-####### INPUTS - CHANGE THESE #########
-# Credentials
-username = '' # Username for MERRA download account
-password = '' # Password for MERRA download account
+####### DEFAULT CONFIGURATIONS #########
+
+# Default locations - West African meteorological stations
+DEFAULT_LOCATIONS = [
+    ('dakar', '14.74', '-17.49'),
+    ('bamako', '12.63', '-8.03'),
+    ('niamey', '13.48', '2.17'),
+    ('ouagadougou', '12.35', '-1.52'),
+    ('abuja', '9.06', '7.49')
+]
+
+####### USER CONFIGURATIONS - MODIFY THESE #########
+
+# Credentials (Required)
+username = ''  # Your MERRA-2 account username
+password = ''  # Your MERRA-2 account password
 
 # Time range
-years = list(range(2008, 2025))  # Change back to original year range
+years = list(range(2008, 2025))  # Default: 2008-2024
+
+# Locations (use DEFAULT_LOCATIONS or specify your own)
+locs = DEFAULT_LOCATIONS
 
 # File paths
 BASE_DATA_DIR = '/Volumes/One Touch/Cloud'  # Base directory for all data
@@ -25,10 +62,10 @@ VARIABLES_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 # Parallel processing settings
 NUMBER_OF_CONNECTIONS = 10  # Number of parallel downloads
-NUMBER_OF_PROCESSES = 3     # Number of parallel processing workers
+NUMBER_OF_PROCESSES = 3    # Number of parallel processing workers
 
-# Read variables configuration from CSV file
-def parse_variables_table():
+####### HELPER FUNCTIONS #########
+def parse_variables_table(config_file=VARIABLES_CONFIG_FILE):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     variables_path = os.path.join(script_dir, 'merra2_variables.csv')
     df = pd.read_csv(variables_path)
@@ -49,167 +86,7 @@ def parse_variables_table():
 # Load variables configuration
 variables_config = parse_variables_table()
 
-locs = [
-    ('bilma', '18.68', '12.92'),
-    ('agadez', '16.97', '7.98'),
-    ('tillabery', '14.2', '1.45'),
-    ('tahoua_airp.', '14.88', '5.27'),
-    ('goure', '13.98', '10.27'),
-    ("n'guigmi", '14.25', '13.12'),
-    ('niamey_airport', '13.48', '2.17'),
-    ('dosso', '13.03', '3.3'),
-    ("birni_n'konni", '13.8', '5.25'),
-    ('maradi_airp.', '13.5', '7.13'),
-    ('diffa_airp.', '13.37', '12.63'),
-    ('zinder_airp.', '13.78', '8.98'),
-    ('magaria', '12.98', '8.93'),
-    ('maine-soroa', '13.23', '12.02'),
-    ('gaya', '11.88', '3.45'),
-    ('tessalit', '20.24', '0.98'),
-    ('kidal', '18.43', '1.35'),
-    ('tombouktou_airp.', '16.73', '-3'),
-    ('gao_airp.', '16.25', '-0.01'),
-    ('nioro_du_sahel_airp.', '15.24', '-9.58'),
-    ('nara', '15.17', '-7.28'),
-    ('yelimane', '15.12', '-10.57'),
-    ('hombori', '15.29', '-1.7'),
-    ('menaka', '15.91', '2.41'),
-    ('kayes_airp.', '14.48', '-11.4'),
-    ('mopti_airp.', '14.51', '-4.08'),
-    ('kita', '13.07', '-9.47'),
-    ('segou', '13.4', '-6.15'),
-    ('san', '13.31', '-4.88'),
-    ('kenieba', '12.85', '-11.23'),
-    ('bamako', '12.63', '-8.03'),
-    ('bamako_airp.', '12.53', '-7.95'),
-    ('koutiala', '12.38', '-5.47'),
-    ('bougouni', '11.44', '-7.51'),
-    ('sikasso', '11.35', '-5.68'),
-    ('bir_moghrein', '25.23', '-11.58'),
-    ("f'derik", '22.68', '-12.7'),
-    ('zouerate', '22.75', '-12.48'),
-    ('nouadhibou_airp.', '20.93', '-17.03'),
-    ('atar', '20.52', '-13.07'),
-    ('akjoujt', '19.73', '-14.38'),
-    ('nouakchott_airp.', '18.1', '-15.95'),
-    ('tidjikja', '18.57', '-11.43'),
-    ('boutilimit', '17.53', '-14.68'),
-    ('rosso', '16.5', '-15.82'),
-    ('kaedi_airp.', '16.15', '-13.52'),
-    ('nema', '16.6', '-7.26'),
-    ('kiffa', '16.63', '-11.4'),
-    ('ayoun_el_atrouss_airp.', '16.71', '-9.64'),
-    ('saint_louis_airp.', '16.05', '-16.46'),
-    ('podor', '16.65', '-14.96'),
-    ('linguere', '15.39', '-15.12'),
-    ('matam', '15.64', '-13.25'),
-    ('dakar/yoff', '14.74', '-17.49'),
-    ('dakar-diass-aibd', '14.67', '-17.07'),
-    ('diourbel', '14.65', '-16.23'),
-    ('kaolack_airp.', '14.15', '-16.05'),
-    ('tambacounda_airp.', '13.74', '-13.65'),
-    ('simenti_airp.', '13.05', '-13.3'),
-    ('ziguinchor_airp.', '12.55', '-16.28'),
-    ('cap_skirring_airp.', '12.4', '-16.75'),
-    ('kolda_airp.', '12.9', '-14.97'),
-    ('kedougou_airp.', '12.57', '-12.22'),
-    ('banjul-yundum', '13.34', '-16.65'),
-    ('bissau_airp.', '11.89', '-15.65'),
-    ('bolama', '11.58', '-15.48'),
-    ('bafata', '12.18', '-14.67'),
-    ('koundara', '12.5', '-13.31'),
-    ('labe', '11.31', '-12.3'),
-    ('siguiri', '11.43', '-9.16'),
-    ('boko', '10.93', '-14.81'),
-    ('kindia', '10.05', '-12.86'),
-    ('mamou', '10.36', '-12.08'),
-    ('kankan', '10.38', '-9.3'),
-    ('conakry', '9.56', '-13.61'),
-    ('faranah-badala', '10.03', '-10.75'),
-    ('kissidougou', '9.41', '-10.08'),
-    ('macenta', '8.53', '-9.5'),
-    ('nizerekore', '7.75', '-8.28'),
-    ('lungi', '8.61', '-13.2'),
-    ('bonthe', '7.53', '-12.5'),
-    ('makeni', '8.9', '-12.05'),
-    ('yele', '8.42', '-11.83'),
-    ('njala', '8.1', '-12.1'),
-    ('bo', '7.95', '-11.77'),
-    ('kabala', '9.58', '-11.55'),
-    ('daru', '7.98', '-10.85'),
-    ('sefadu', '8.65', '-10.97'),
-    ('kano', '12.05', '8.53'),
-    ('maiduguri', '11.85', '13.08'),
-    ('ilorin', '8.48', '4.58'),
-    ('minna', '9.65', '6.46'),
-    ('jos', '9.86', '8.9'),
-    ('yola', '9.26', '12.43'),
-    ('lagos-ikeja', '6.58', '3.33'),
-    ('port_harcourt', '4.85', '7.01'),
-    ('enugu', '6.46', '7.55'),
-    ('makurdi', '7.73', '8.53'),
-    ('kandi', '11.14', '2.94'),
-    ('natitingou', '10.31', '1.38'),
-    ('parakou', '9.36', '2.61'),
-    ('save', '8.03', '2.47'),
-    ('bohicon', '7.17', '2.07'),
-    ('cotonou', '6.35', '2.38'),
-    ('dapaong', '10.87', '0.22'),
-    ('mango', '10.37', '0.47'),
-    ('niamtougou', '9.77', '1.1'),
-    ('kara', '9.55', '1.17'),
-    ('sokode', '8.98', '1.15'),
-    ('atakpame', '7.58', '1.12'),
-    ('kouma-konda', '6.95', '0.58'),
-    ('tabligbo', '6.58', '1.5'),
-    ('lome', '6.17', '1.25'),
-    ('navrongo', '10.9', '-1.1'),
-    ('wa', '10.05', '-2.5'),
-    ('bole', '9.03', '-2.48'),
-    ('tamale', '9.55', '-0.86'),
-    ('wenchi', '7.75', '-2.1'),
-    ('kete-krachi', '7.81', '-0.03'),
-    ('sunyani', '7.36', '-2.33'),
-    ('kumasi', '6.71', '-1.59'),
-    ('sefwi_bekwai', '6.2', '-2.33'),
-    ('abetifi', '6.67', '-0.75'),
-    ('ho', '6.6', '0.46'),
-    ('akim_oda', '5.93', '-0.98'),
-    ('koforidua', '6.08', '-0.25'),
-    ('akuse', '6.1', '0.12'),
-    ('akatsi', '6.12', '0.8'),
-    ('axim', '4.87', '-2.23'),
-    ('takoradi', '4.9', '-1.77'),
-    ('saltpond', '5.2', '-1.06'),
-    ('accra', '5.6', '-0.17'),
-    ('tema', '5.62', '0'),
-    ('ada', '5.78', '0.63'),
-    ('dori', '14.03', '-0.03'),
-    ('ouahigouya', '13.58', '-2.43'),
-    ('ouagadougou', '12.35', '-1.52'),
-    ('bogande', '12.98', '-0.13'),
-    ('dedougou', '12.47', '-3.48'),
-    ("fada_n'gourma", '12.07', '0.35'),
-    ('bobo-dioulasso', '11.16', '-4.33'),
-    ('boromo', '11.73', '-2.92'),
-    ('po', '11.17', '-1.15'),
-    ('gaoua', '10.33', '-3.18'),
-    ('odienne', '9.5', '-7.57'),
-    ('korhogo', '9.38', '-5.55'),
-    ('bondoukou', '8.05', '-2.78'),
-    ('man', '7.38', '-7.52'),
-    ('bouake', '7.73', '-5.07'),
-    ('gagnoa', '6.13', '-5.95'),
-    ('daloa', '6.79', '-6.47'),
-    ('dimbokro', '6.65', '-4.7'),
-    ('yamoussoukro', '6.9', '-5.35'),
-    ('abidjan', '5.25', '-3.93'),
-    ('adiake', '5.3', '-3.3'),
-    ('tabou', '4.44', '-7.36'),
-    ('san_pedro', '4.75', '-6.66'),
-    ('sassandra_(airport)', '4.93', '-6.13'),
-    ('roberts_field', '6.25', '-10.35'),
-] # List of locations for which data will be downloaded. Each location is a three-tuple, consisting of name (string), latitude, and longitude floats)
+locs = DEFAULT_LOCATIONS # List of locations for which data will be downloaded. Each location is a three-tuple, consisting of name (string), latitude, and longitude floats)
 
 #%%
 ####### CONSTANTS - DO NOT CHANGE BELOW THIS LINE #######

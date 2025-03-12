@@ -1,5 +1,8 @@
-# merrakit
+# merrakit 🌍
+
 A high-performance Python package for parallel downloading and processing of NASA's MERRA-2 meteorological data. Built with multi-processing capabilities and robust error handling, it efficiently manages large-scale climate data downloads while providing convenient CSV-based configuration.
+
+[![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
 This package is an enhanced fork of the [original MERRA download script](https://github.com/emilylaiken/merradownload), completely redesigned for parallel processing and multi-variable support.
 
@@ -42,17 +45,83 @@ Example CSV entry:
 ```csv
 Variable Used in Study,Field ID,Field Name,Database Name,Database ID,Conversion Function,Aggregator
 TOA upwelling longwave flux,LWTUP,Longwave Top-of-Atmosphere Upwelling Flux,M2T1NXRAD,tavg1_2d_rad_Nx,lambda x: x,mean
+precipitation,PRECTOT,Total precipitation,M2T1NXFLX,tavg1_2d_flx_Nx,lambda x: x * 86400,sum  # Convert from kg/m^2/s to mm/day
+temperature,T2M,2-meter air temperature,M2T1NXFLX,tavg1_2d_flx_Nx,lambda x: x - 273.15,mean  # Convert from K to °C
+wind_speed,U2M,2-meter eastward wind,M2T1NXFLX,tavg1_2d_flx_Nx,lambda x: x,mean
 ```
 
-#### Package Configuration
-At the top of `multi_processing_download.py`, configure:
-1. `username` and `password`: Your MERRA-2 account credentials
-2. `years`: List of years to download (default: 2008-2024)
-3. `BASE_DATA_DIR`: Base directory for data storage
-4. `NUMBER_OF_CONNECTIONS`: Number of parallel download connections (default: 5)
-5. `NUMBER_OF_PROCESSES`: Number of parallel processing workers (default: 3)
+### Quick Start
 
-The script includes a comprehensive list of meteorological station locations. You can modify the `locs` list to include your desired locations, where each location is specified as (name, latitude, longitude).
+1. Clone this repository:
+```bash
+git clone https://github.com/yourusername/merrakit.git
+cd merrakit
+```
+
+2. Install dependencies:
+```bash
+pip install numpy pandas xarray matplotlib netCDF4 python-dateutil
+```
+
+3. Edit `merra_scraping.py` and set your MERRA-2 credentials and configuration:
+```python
+# Credentials
+username = 'your_username'  # From earthdata.nasa.gov
+password = 'your_password'
+
+# Configuration
+years = list(range(2020, 2024))  # Last 4 years
+BASE_DATA_DIR = '/path/to/data'
+NUMBER_OF_CONNECTIONS = 5  # Parallel downloads
+NUMBER_OF_PROCESSES = 3   # Processing workers
+
+# Use default West African locations or specify your own
+locs = [
+    ('london', '51.5074', '-0.1278'),
+    ('paris', '48.8566', '2.3522')
+]
+```
+
+4. Run the script:
+```bash
+python merra_scraping.py
+```
+
+### Default Settings & Customization
+
+#### Default Locations
+The script comes with a set of default meteorological stations in West Africa:
+```python
+DEFAULT_LOCATIONS = [
+    ('dakar', '14.74', '-17.49'),
+    ('bamako', '12.63', '-8.03'),
+    ('niamey', '13.48', '2.17'),
+    ('ouagadougou', '12.35', '-1.52'),
+    ('abuja', '9.06', '7.49')
+]
+```
+
+You can use these defaults or specify your own locations as shown in the Quick Start example.
+
+#### Variable Configuration
+The `merra2_variables.csv` file defines what data to download:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| Variable Used in Study | Your chosen name | "temperature" |
+| Field ID | MERRA-2 identifier | "T2M" |
+| Field Name | Full variable name | "2-meter air temperature" |
+| Database Name | MERRA-2 database | "M2T1NXFLX" |
+| Database ID | Database identifier | "tavg1_2d_flx_Nx" |
+| Conversion Function | Unit conversion | "lambda x: x - 273.15" |
+| Aggregator | Aggregation method | "mean" |
+
+See the example CSV entries above for common meteorological variables.
+
+#### Processing Settings
+- `NUMBER_OF_CONNECTIONS`: Controls parallel downloads (5-10 recommended)
+- `NUMBER_OF_PROCESSES`: Controls parallel processing (2-4 recommended)
+- `years`: List of years to download (e.g., `range(2008, 2025)`)
 
 ### 3) Running the Script
 Run the script via command line:
@@ -71,14 +140,47 @@ The script now provides detailed progress information:
 Data is organized by variable and location:
 ```
 BASE_DATA_DIR/
-└── [variable_name]/
-    └── [location]/
-        ├── MERRA2_*.nc4          # Raw downloaded files
+└── [variable_name]/             # e.g., temperature
+    └── [location]/             # e.g., london
+        ├── MERRA2_*.nc4       # Raw downloaded files
         └── processed/
-            ├── [variable]_[location]_hourly.csv
-            ├── [variable]_[location]_daily.csv
-            └── [variable]_[location]_weekly.csv
+            ├── temperature_london_hourly.csv  # Hour-by-hour data
+            ├── temperature_london_daily.csv   # Daily aggregates
+            └── temperature_london_weekly.csv  # Weekly aggregates
 ```
+
+#### Data Formats
+1. Hourly Data (`*_hourly.csv`):
+```csv
+date,hour,temperature
+2023-01-01,00:00:00,12.5
+2023-01-01,01:00:00,12.1
+...
+```
+
+2. Daily Data (`*_daily.csv`):
+```csv
+date,temperature
+2023-01-01,12.8
+2023-01-02,13.2
+...
+```
+
+3. Weekly Data (`*_weekly.csv`):
+```csv
+Year,Week,temperature
+2023,1,12.9
+2023,2,13.4
+...
+```
+
+### Error Handling & Validation
+The script includes robust error handling:
+- Validates all downloads for completeness
+- Automatically retries failed downloads
+- Checks for and removes corrupted files
+- Falls back to alternative NetCDF engines if needed
+- Provides detailed progress and error reporting
 
 The CSV files contain:
 - Hourly data: date, hour, and measured value columns
