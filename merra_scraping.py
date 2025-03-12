@@ -13,8 +13,8 @@ import ast  # for safely evaluating string lambda functions
 # %%
 ####### INPUTS - CHANGE THESE #########
 # Credentials
-username = 'omitusaoo' # Username for MERRA download account
-password = 'MXzTK6xmo2O0f5EEtlV@%t4r0AQM!!s9ptY' # Password for MERRA download account
+username = '' # Username for MERRA download account
+password = '' # Password for MERRA download account
 
 # Time range
 years = list(range(2008, 2025))  # Change back to original year range
